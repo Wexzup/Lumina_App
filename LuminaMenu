@@ -1,0 +1,206 @@
+import tkinter as tk
+import os
+import datetime
+import subprocess
+from tkinter import messagebox
+import subprocess
+import webbrowser
+
+# Plaintext password
+MAX_ATTEMPTS = 3
+attempts = 0
+
+# Global variables for settings
+theme_color = "#f5f5f5"
+font_size = 10
+
+def ShowTestPage():
+    test_window = tk.Toplevel(fenetre)
+    test_window.title("Test - Clickable Links")
+    test_window.geometry("500x300")
+    test_window.configure(bg=theme_color)
+
+    links = [
+        ("HideMe", "https://hide.me/en/proxy"),
+        ("Tiny", "https://tiny.cc/")
+    ]
+
+    for text, url in links:
+        frame = tk.Frame(test_window, bg=theme_color)
+        frame.pack(fill=tk.X, padx=10, pady=5)
+        
+        label = tk.Label(frame, text=text, font=("Arial", font_size), bg=theme_color)
+        label.pack(side=tk.LEFT, padx=5)
+        
+        button = tk.Button(frame, text="🔗 Open", command=lambda u=url: webbrowser.open(u), bg="#0078D7", fg="white")
+        button.pack(side=tk.RIGHT)
+
+def ShowUserPage():
+    txt = "MdpFini.txt"
+    user_window = tk.Toplevel(fenetre)
+    user_window.title("User Info")
+    user_window.geometry("500x300")
+    user_window.configure(bg=theme_color)
+
+    scrollbar = tk.Scrollbar(user_window)
+    scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+    text_area = tk.Text(user_window, wrap=tk.WORD, bg=theme_color, font=("Arial", font_size), yscrollcommand=scrollbar.set)
+    
+    try:
+        with open(txt, "r") as file:
+            lines = file.readlines()
+            for line in lines:
+                if "|||" in line:
+                    user, password = line.strip().split("|||")
+                    text_area.insert(tk.END, f"👤 User: {user} - 🔒 Psswd: {password}\n")
+    except FileNotFoundError:
+        text_area.insert(tk.END, "❌ Error: File not found.")
+
+    text_area.pack(expand=True, fill=tk.BOTH, padx=10, pady=10)
+    scrollbar.config(command=text_area.yview)
+
+def ApplySettings():
+    global theme_color, font_size
+    theme_color = color_var.get()
+    font_size = int(size_var.get())
+
+    fenetre.configure(bg=theme_color)
+    result_label.config(bg=theme_color, font=("Arial", font_size))
+    messagebox.showinfo("Settings", "Settings applied successfully!")
+
+def ShowSettings():
+    settings_window = tk.Toplevel(fenetre)
+    settings_window.title("Settings")
+    settings_window.geometry("400x250")
+    settings_window.configure(bg=theme_color)
+
+    tk.Label(settings_window, text="Theme Color:", bg=theme_color).pack(pady=5)
+    color_options = ["#f5f5f5", "#cdcdcd", "#6B6B6B"]
+    color_dropdown = tk.OptionMenu(settings_window, color_var, *color_options)
+    color_dropdown.pack(pady=5)
+
+    tk.Label(settings_window, text="Font Size:", bg=theme_color).pack(pady=5)
+    size_options = ["10", "12", "14"]
+    size_dropdown = tk.OptionMenu(settings_window, size_var, *size_options)
+    size_dropdown.pack(pady=5)
+
+    apply_button = tk.Button(settings_window, text="Apply Settings", command=ApplySettings, bg="#0078D7", fg="white")
+    apply_button.pack(pady=10)
+
+def FindFileInOs():
+    nom_fichier = entryffio.get()
+    dossier_depart = os.path.join(os.path.expanduser("~"), "Desktop")
+
+    for dossier, _, fichiers in os.walk(dossier_depart):
+        if nom_fichier in fichiers:
+            global chemin_fichier
+            chemin_fichier = os.path.join(dossier, nom_fichier)
+
+            taille = os.path.getsize(chemin_fichier)
+            date_creation = datetime.datetime.fromtimestamp(os.path.getctime(chemin_fichier)).strftime('%Y-%m-%d %H:%M:%S')
+            date_modification = datetime.datetime.fromtimestamp(os.path.getmtime(chemin_fichier)).strftime('%Y-%m-%d %H:%M:%S')
+
+            result_label.config(text=f"✅ File found:\n📂 Path: {chemin_fichier}\n📏 Size: {taille} bytes\n⏳ Created: {date_creation}\n🛠 Modified: {date_modification}")
+
+            delete_button.grid(row=3, column=1, pady=10)
+            open_button.grid(row=4, column=1, pady=10)
+            return
+    
+    result_label.config(text="❌ File not found.")
+    delete_button.grid_forget()
+    open_button.grid_forget()
+
+PASSWORD = "E"
+def DeleteFile():
+    if os.path.exists(chemin_fichier):
+        if messagebox.askyesno("Confirm Delete", f"Are you sure you want to delete '{chemin_fichier}'?"):
+            os.remove(chemin_fichier)
+            result_label.config(text="✅ File deleted.")
+            delete_button.grid_forget()
+            open_button.grid_forget()
+
+def OpenFile():
+    if os.path.exists(chemin_fichier):
+        subprocess.run(["start", chemin_fichier], shell=True)
+
+def ShowEntryField():
+    entryffio.grid(row=1, column=1, padx=20, pady=10)
+    search_button.grid(row=2, column=1, pady=10)
+
+def verify_password():
+    global attempts
+    
+    if attempts >= MAX_ATTEMPTS:
+        error_label.config(text="🔒 Too many failed attempts. Locked out!", fg="red")
+        password_entry.config(state=tk.DISABLED)
+        return
+
+    user_input = password_entry.get()
+
+    if user_input == PASSWORD:
+        password_window.destroy()
+        start_main_app()
+    else:
+        attempts += 1
+        error_label.config(text=f"❌ Incorrect password ({attempts}/{MAX_ATTEMPTS})", fg="red")
+        if attempts >= MAX_ATTEMPTS:
+            password_entry.config(state=tk.DISABLED)
+
+def start_main_app():
+    global fenetre, color_var, size_var, entryffio, result_label, search_button, delete_button, open_button
+
+    fenetre = tk.Tk()
+    fenetre.title("Lumina - Ai")
+    fenetre.geometry("600x400")
+    fenetre.configure(bg=theme_color)
+
+    menu_bar = tk.Menu(fenetre)
+    fenetre.config(menu=menu_bar)
+
+    menu_bar.add_command(label="🔎 Find Files", command=ShowEntryField)
+    menu_bar.add_command(label="👤 User", command=ShowUserPage)
+    menu_bar.add_command(label="🌐 ProxyAvoidence", command=ShowTestPage)
+    menu_bar.add_command(label="⚙ Settings", command=ShowSettings)
+    menu_bar.add_command(label="ℹ Info", command=lambda: messagebox.showinfo("Info", """
+    🔹 Application: Lumina
+    🔹 Version: 1.3
+    🔹 OS: Windows
+    🔹 Author: Unknown
+    🔹 Features: File Search, File Deletion, Open File
+    """))
+    
+    menu_bar.add_command(label="❌ Exit", command=fenetre.destroy)
+
+    color_var = tk.StringVar(value=theme_color)
+    size_var = tk.StringVar(value=str(font_size))
+
+    entryffio = tk.Entry(fenetre, width=30)
+    result_label = tk.Label(fenetre, text="", justify="left", bg=theme_color, font=("Arial", font_size))
+
+    search_button = tk.Button(fenetre, text="🔍 Search File", command=FindFileInOs, bg="#0078D7", fg="white", font=("Arial", font_size), padx=10, pady=5)
+    delete_button = tk.Button(fenetre, text="🗑 Delete File", command=DeleteFile, bg="#D70000", fg="white", font=("Arial", font_size), padx=10, pady=5)
+    open_button = tk.Button(fenetre, text="📂 Open File", command=OpenFile, bg="#00B050", fg="white", font=("Arial", font_size), padx=10, pady=5)
+
+    result_label.grid(row=5, column=1, padx=20, pady=10)
+    delete_button.grid(row=6, column=1, pady=10)
+    open_button.grid(row=7, column=1, pady=10)
+
+    delete_button.grid_forget()
+    open_button.grid_forget()
+
+    fenetre.mainloop()
+
+password_window = tk.Tk()
+password_window.title("Security Check")
+password_window.geometry("300x200")
+
+tk.Label(password_window, text="🔒 Enter Password:", font=("Arial", 12)).pack(pady=10)
+password_entry = tk.Entry(password_window, show="*", width=25)
+password_entry.pack(pady=5)
+
+tk.Button(password_window, text="Login", command=verify_password, bg="#0078D7", fg="white").pack(pady=10)
+error_label = tk.Label(password_window, text="", font=("Arial", 10))
+error_label.pack()
+
+password_window.mainloop()
